@@ -25,7 +25,12 @@ def get_session_info(request: Request):
 def login_require(func):
     @wraps(func)
     async def wrapper(request: Request, *args, **kwargs):
-        code = get_session_id(request).strip()
+        code = get_session_id(request)
+
+        if code is None:
+            raise HTTPException(status_code=403, detail="접근 권한이 없음.")
+        else:
+            code = code.strip()
 
         if not db.verify_session(code):
             raise HTTPException(status_code=401, detail='Need login.')
