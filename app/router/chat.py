@@ -52,5 +52,5 @@ async def new_chat(request: Request, data: NewChat):
 
     res = requests.post(os.getenv('AI_SERVER') + "/plant/chat", json=payload)
 
-    return JSONResponse(status_code=200, content={'res': res.json()})
+    return JSONResponse(status_code=200, content={'res': res.json().get('response')})
 
