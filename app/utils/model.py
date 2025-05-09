@@ -14,3 +14,7 @@ class PostUserCrop(BaseModel):
 class NewChat(BaseModel):
     c_id: int
     chat: str
+
+class WaterCrop(BaseModel):
+    c_id: int
+    water: int

@@ -7,7 +7,7 @@ from app.utils.model import NewChat
 import app.utils.db_driver as db
 import requests
 import os
-
+import json
 
 router = APIRouter()
 
@@ -50,7 +50,9 @@ async def new_chat(request: Request, data: NewChat):
 
     print(payload)
 
-    res = requests.post(os.getenv('AI_SERVER') + "/plant/chat", json=payload)
+    res = requests.post(os.getenv('AI_SERVER') + "/plant/chat", json=payload).json()
 
-    return JSONResponse(status_code=200, content={'res': res.json().get('response')})
+    data = json.loads(res.get('message'))
+
+    return JSONResponse(status_code=200, content={'res': data.get('message')})
 

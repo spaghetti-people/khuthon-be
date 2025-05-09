@@ -8,7 +8,7 @@ from datetime import date, timedelta
 
 import requests
 
-from app.utils.model import PostUserCrop
+from app.utils.model import PostUserCrop, WaterCrop
 
 router = APIRouter()
 
@@ -33,8 +33,8 @@ async def create_user_crop(data: PostUserCrop, request: Request):
 async def get_user_crops(request: Request, mode: int):
     user_info = get_session_info(request)
 
-    # mode 1 : 컬렉션 화면
-    # mode 0 : 메인 화면
+    # mode 1 : 컬렉션 화면 -> 성장 완료된 데이터.
+    # mode 0 : 메인 화면 -> 성장 중 인 데이터.
 
     mid = db.get_user_crop(user_info, mode)
 
@@ -51,6 +51,21 @@ async def get_user_crops(request: Request, mode: int):
 
 
     return JSONResponse(status_code=200, content={'res': mid})
+
+@router.post('/water', tags=['crop'])
+@login_require
+def water(request: Request, data: WaterCrop):
+    uid = get_session_info(request)
+
+    res = db.water_crops(uid, data.c_id, data.water)
+
+    # 오늘 물을 더 줄 수 있는 경우. 물 주기.
+    if res is not None:
+        requests.post(os.getenv('REAL_FARM_SERVER') + '/water',
+                      json={'water': data.water})
+
+    return JSONResponse(status_code=200, content={'res': res})
+
 
 
 # @router.get("/crop/create")

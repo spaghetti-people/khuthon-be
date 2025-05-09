@@ -50,6 +50,7 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
 
     cur.execute(crops_table)
 
+    # 로그인된 사용자를 저장하는 테이블
     login_table = """
     CREATE TABLE IF NOT EXISTS login_user (
     login_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,6 +60,22 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     """
 
     cur.execute(login_table)
+
+    # 오늘 사용자가 물준양.
+    water_table = """
+    CREATE TABLE IF NOT EXISTS user_water (
+    water_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    crop_id INTEGER,
+    now_water INTEGER DEFAULT 0,
+    max_water INTEGER DEFAULT 1000,
+    FOREIGN KEY (crop_id) REFERENCES user_crops(nums),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """
+
+    cur.execute(water_table)
+
     pass
 
 
@@ -155,34 +172,34 @@ def get_session_info(key: str, cur: Optional[sqlite3.Cursor] = None):
 
 @_with_cur
 def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
-    query = "SELECT crop_id, nick_name, live_day, is_end FROM user_crops WHERE user_id = ?"
+    query = "SELECT nums, nick_name, live_day, is_end FROM user_crops WHERE user_id = ?"
     cur.execute(query, (uid,))
 
     res = []
 
     for data in cur.fetchall():
-        if data[3] > mode:
+        if data[3] == mode:
             continue
 
         res.append({
             'crop_id': data[0],
             'nick_name': data[1],
             'live_day': data[2],
+            'is_end': data[3],
         })
 
     return res
 
+# 채팅에 필요한 정보.
 @_with_cur
 def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None):
-    query = "SELECT nick_name, live_day FROM user_crops WHERE user_id = ? and crop_id = ?"
+    query = "SELECT nick_name, live_day FROM user_crops WHERE user_id = ? and nums = ?"
     cur.execute(query, (uid, c_id))
 
     data = cur.fetchone()
 
     if data is None:
         raise HTTPException(status_code=404, detail='사용자가 해당 식물을 안 키웁니다.')
-
-    cur.execute("SELECT crop_id, crop_name_KOR FROM crops")
 
     query = "SELECT crop_name_KOR FROM crops WHERE crop_id = ? "
     cur.execute(query, (c_id,))
@@ -193,21 +210,42 @@ def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None
         raise HTTPException(status_code=404, detail='해당 식물이 존재하지 않습니다.')
 
     return [data[0], plant[0], data[1]]
-
-    """
-    CREATE TABLE IF NOT EXISTS user_crops (
-    nums INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT,
-    crop_id INTEGER,
-    nick_name TEXT,
-    live_day INTEGER DEFAULT 1,
-    is_end INTEGER DEFAULT 0,
-    FOREIGN KEY (crop_id) REFERENCES crops(crop_id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-    """
     pass
 
+@_with_cur
+def water_crops(uid: str, c_id: int, water, cur: Optional[sqlite3.Cursor] = None):
+    query = "SELECT now_water, max_water FROM user_water WHERE user_id = ? and crop_id = ?"
+    cur.execute(query, (uid, c_id))
+
+    data = cur.fetchone()
+
+    if data is None:
+        query = "INSERT INTO user_water(user_id, crop_id, now_water) VALUES (?, ?, ?)"
+        cur.execute(query, (uid, c_id, water))
+        return ""
+
+    if data[0] + water > data[1]:
+        return "too many water"
+
+    query = "UPDATE user_water SET now_water = ? WHERE user_id = ? and crop_id = ?"
+    cur.execute(query, (data[0] + water, uid, c_id))
+
+    return "ok"
+
+
+
+    water_table = """
+        CREATE TABLE IF NOT EXISTS user_water (
+        water_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        crop_id INTEGER,
+        now_water INTEGER DEFAULT 0,
+        max_water INTEGER DEFAULT 1000,
+        FOREIGN KEY (crop_id) REFERENCES user_crops(nums),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """
+    pass
 
 if __name__ == "__main__":
     _init_db()
