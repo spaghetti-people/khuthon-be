@@ -16,10 +16,14 @@ session_store = {}
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
 
+
+def get_session_id(request: Request):
+    return request.headers.get('Authorization')
+
 def login_require(func):
     @wraps(func)
     async def wrapper(request: Request, *args, **kwargs):
-        code = request.headers.get('Authorization')
+        code = get_session_id(request)
 
         if code not in session_store:
             raise HTTPException(status_code=401, detail='Need login.')
@@ -28,7 +32,7 @@ def login_require(func):
     return wrapper
 
 
-@router.post('/login',summary='로그인')
+@router.post('/login',summary='로그인', tags=['auth'])
 def login(request: Request, user: User):
     origin = db.get_user(user)
 
@@ -44,11 +48,21 @@ def login(request: Request, user: User):
     pass
 
 
-@router.post('/join', summary='회원 가입')
+@router.post('/join', summary='회원 가입', tags=['auth'])
 def join(user: User):
     db.join(user.id, hash_pw(user.pw))
 
     return JSONResponse(content={'message': '회원 가입 성공.'}, status_code=200)
+
+@router.get('/logout', summary="로그아웃", tags=['auth'])
+@login_require
+def logout(request: Request):
+    sid = get_session_id(request)
+
+    session_store.pop(sid, None)
+
+    return JSONResponse(status_code=200, content={'message': '로그아웃 성공.'})
+
 
 @router.get('/test')
 @login_require
