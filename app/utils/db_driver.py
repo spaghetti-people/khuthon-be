@@ -111,7 +111,7 @@ def create_user_crop(data: PostUserCrop, user_id: str, cur: Optional[sqlite3.Cur
     try:
         cur.execute(query, (user_id, data.c_id, data.name))
     except Exception as e:
-        raise HTTPException(status_code=400, detail='해당 곡물이 존재하지 않습니다.')
+        raise HTTPException(status_code=400, detail='닉네임이 중복되었습니다.')
 
 @_with_cur
 def login(key: str, user_id: str, cur: Optional[sqlite3.Cursor] = None):
@@ -171,6 +171,42 @@ def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
         })
 
     return res
+
+@_with_cur
+def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None):
+    query = "SELECT nick_name FROM user_crops WHERE user_id = ? and crop_id = ?"
+    cur.execute(query, (uid, c_id))
+
+    data = cur.fetchone()
+
+    if data is None:
+        raise HTTPException(status_code=404, detail='사용자가 해당 식물을 안 키웁니다.')
+
+    cur.execute("SELECT crop_id, crop_name_KOR FROM crops")
+
+    query = "SELECT crop_name_KOR FROM crops WHERE crop_id = ? "
+    cur.execute(query, (c_id,))
+
+    plant = cur.fetchone()
+
+    if plant is None:
+        raise HTTPException(status_code=404, detail='해당 식물이 존재하지 않습니다.')
+
+    return [data[0], plant[0]]
+
+    """
+    CREATE TABLE IF NOT EXISTS user_crops (
+    nums INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    crop_id INTEGER,
+    nick_name TEXT,
+    live_day INTEGER DEFAULT 1,
+    is_end INTEGER DEFAULT 0,
+    FOREIGN KEY (crop_id) REFERENCES crops(crop_id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """
+    pass
 
 
 if __name__ == "__main__":

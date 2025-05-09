@@ -8,12 +8,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from router.auth import router as auth_router
 from router.crop import router as crop_router
+from router.chat import router as chat_router
 
 
 from utils.db_driver import _init_db
-
-
-from router.test import router as test_router
 
 
 # 환경 변수 로딩
@@ -42,8 +40,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 # 라우터 추가
 app.include_router(auth_router)
 app.include_router(crop_router)
-
-app.include_router(test_router)
+app.include_router(chat_router)
 
 
 if __name__ == "__main__":
