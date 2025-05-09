@@ -1,16 +1,22 @@
 import os
+from http.client import HTTPResponse
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 from app.router.auth import login_require, get_session_info
 import app.utils.db_driver as db
 from datetime import date, timedelta
+<<<<<<< HEAD
 from app.router.predict import SensorData
 from pydantic import BaseModel
 import pandas as pd
 from app.utils.predict import preprocess_data, normalize_prediction
 import joblib
 from pathlib import Path
+=======
+from io import BytesIO
+>>>>>>> 85ddc6148d6ff8413963856b11acc29d0b92fde1
 
 import requests
 
@@ -87,6 +93,20 @@ def water(request: Request, data: WaterCrop):
         )
 
     return JSONResponse(status_code=200, content={"res": res})
+
+@router.get('/time/{c_id}', tags=['crop'])
+@login_require
+async def get_time(request: Request, c_id: int):
+
+    uid = get_session_info(request)
+
+    row = db.get_user_time(uid, c_id)
+
+
+    filename, content = row
+
+    return StreamingResponse(BytesIO(content), media_type="video/mp4")
+    # return Response(content, media_type="video/mp4", headers={"Content-Disposition": f"inline; filename={filename}"})
 
 
 # @router.get("/crop/create")
