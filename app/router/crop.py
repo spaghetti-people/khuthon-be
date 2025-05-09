@@ -37,7 +37,7 @@ def get_crop():
 
 @router.post("/user/crop", tags=["crop"])
 @login_require
-async def create_user_crop(data: PostUserCrop, request: Request):
+def create_user_crop(data: PostUserCrop, request: Request):
     user_info = get_session_info(request)
 
     db.create_user_crop(data, user_info)
@@ -47,7 +47,7 @@ async def create_user_crop(data: PostUserCrop, request: Request):
 
 @router.get("/user/crop", tags=["crop"])
 @login_require
-async def get_user_crops(request: Request, mode: int):
+def get_user_crops(request: Request, mode: int):
     user_info = get_session_info(request)
 
     # mode 1 : 컬렉션 화면 -> 성장 완료된 데이터.
@@ -107,7 +107,7 @@ def water(request: Request, data: WaterCrop):
 
 @router.get("/time/{c_id}", tags=["crop"])
 @login_require
-async def get_time(request: Request, c_id: int):
+def get_time(request: Request, c_id: int):
 
     uid = get_session_info(request)
 

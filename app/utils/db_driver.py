@@ -28,6 +28,12 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     cur.execute("PRAGMA foreign_keys = ON")
 
     # create user table
+    cur.execute("DROP TABLE user_water")
+    cur.execute("DROP TABLE login_user")
+    cur.execute("DROP TABLE video_water")
+    cur.execute("DROP TABLE user_crops")
+    cur.execute("DROP TABLE users")
+
     user_table = """
     CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -37,6 +43,7 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     cur.execute(user_table)
 
     # 사용자가 키우고 있는 식물 테이블
+
     crops_table = """
     CREATE TABLE IF NOT EXISTS user_crops (
     nums INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +60,7 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     cur.execute(crops_table)
 
     # 로그인된 사용자를 저장하는 테이블
+
     login_table = """
     CREATE TABLE IF NOT EXISTS login_user (
     login_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,6 +72,8 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     cur.execute(login_table)
 
     # 오늘 사용자가 물준양.
+
+
     water_table = """
     CREATE TABLE IF NOT EXISTS user_water (
     water_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,6 +89,7 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     cur.execute(water_table)
 
     # video_table = ""
+
     video_table = """
     CREATE TABLE IF NOT EXISTS video_water (
     video_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +102,6 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     """
 
     cur.execute(video_table)
-
 
     pass
 
@@ -235,18 +245,21 @@ def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
 # 채팅에 필요한 정보.
 @_with_cur
 def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None):
-    query = "SELECT nick_name, live_day FROM user_crops WHERE user_id = ? and nums = ?"
+    query = "SELECT nick_name, live_day, crop_id FROM user_crops WHERE user_id = ? and nums = ?"
     cur.execute(query, (uid, c_id))
 
     data = cur.fetchone()
+    print('data: ', data)
 
     if data is None:
         raise HTTPException(status_code=404, detail='사용자가 해당 식물을 안 키웁니다.')
 
     query = "SELECT crop_name_KOR FROM crops WHERE crop_id = ? "
-    cur.execute(query, (c_id,))
+    cur.execute(query, (data[2],))
 
     plant = cur.fetchone()
+
+    print('plant: ', plant)
 
     if plant is None:
         raise HTTPException(status_code=404, detail='해당 식물이 존재하지 않습니다.')

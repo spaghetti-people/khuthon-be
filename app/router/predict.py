@@ -45,7 +45,7 @@ class PredictionResponse(BaseModel):
 
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict_growth(sensor_data: SensorData):
+def predict_growth(sensor_data: SensorData):
     try:
         input_data = pd.DataFrame([sensor_data.dict()])
         processed_data = preprocess_data(input_data)

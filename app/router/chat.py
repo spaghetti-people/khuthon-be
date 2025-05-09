@@ -13,10 +13,11 @@ router = APIRouter()
 
 @router.post('/chat', tags=['chat'])
 @login_require
-async def new_chat(request: Request, data: NewChat):
+def new_chat(request: Request, data: NewChat):
 
+    print("chat: ", data)
     user_id = get_session_info(request)
-
+    print('user: ', user_id)
     child = {
         'name': '지훈',
         'age': 7,
@@ -27,6 +28,8 @@ async def new_chat(request: Request, data: NewChat):
     }
 
     info = db.get_user_crop_info(user_id, data.c_id)
+
+    print('info: ', info)
 
     plant_info = {
         'name': info[0],
