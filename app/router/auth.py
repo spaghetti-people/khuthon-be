@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 
 from fastapi import APIRouter, Response, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -9,6 +10,8 @@ from app.utils.model import User
 
 router = APIRouter()
 
+session_store = {}
+
 # 비밀번호 해시 함수
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
@@ -16,14 +19,13 @@ def hash_pw(pw: str) -> str:
 def login_require(func):
     @wraps(func)
     async def wrapper(request: Request, *args, **kwargs):
-        user = request.session.get('user')
+        code = request.headers.get('Authorization')
 
-        if not user:
+        if code not in session_store:
             raise HTTPException(status_code=401, detail='Need login.')
 
         return await func(request=request, *args, **kwargs)
     return wrapper
-
 
 
 @router.post('/login',summary='로그인')
@@ -33,8 +35,10 @@ def login(request: Request, user: User):
     now = hash_pw(user.pw)
 
     if origin[0] == user.id and origin[1] == now:
-        request.session["user"] = user.id
-        return JSONResponse(status_code=200, content={'message': '로그인 성공'})
+        session_id = str(uuid.uuid4())
+
+        session_store[session_id] = {'user': user.id}
+        return JSONResponse(status_code=200, content={'message': '로그인 성공', 'session': session_id})
 
     return JSONResponse(status_code=401, content={'message': '로그인 실패'})
     pass

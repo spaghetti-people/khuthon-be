@@ -9,6 +9,9 @@ from router.auth import router as auth_router
 from utils.db_driver import _init_db
 
 
+from router.test import router as test_router
+
+
 # 환경 변수 로딩
 load_dotenv()
 
@@ -24,7 +27,7 @@ origins = [
 # CORS 추가
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=['*'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,6 +37,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
 # 라우터 추가
 app.include_router(auth_router)
+app.include_router(test_router)
 
 if __name__ == "__main__":
     _init_db()
