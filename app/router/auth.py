@@ -24,7 +24,7 @@ def get_session_info(request: Request):
 
 def login_require(func):
     @wraps(func)
-    async def wrapper(request: Request, *args, **kwargs):
+    def wrapper(request: Request, *args, **kwargs):
         code = get_session_id(request)
 
         if code is None:
@@ -35,7 +35,7 @@ def login_require(func):
         if not db.verify_session(code):
             raise HTTPException(status_code=401, detail='Need login.')
 
-        return await func(request=request, *args, **kwargs)
+        return func(request=request, *args, **kwargs)
     return wrapper
 
 
@@ -64,7 +64,7 @@ def join(user: User):
 
 @router.get('/logout', summary="로그아웃", tags=['auth'])
 @login_require
-async def logout(request: Request):
+def logout(request: Request):
     sid = get_session_id(request)
 
     db.logout(sid)
@@ -74,5 +74,5 @@ async def logout(request: Request):
 
 @router.get('/test')
 @login_require
-async def test(request: Request):
+def test(request: Request):
     return JSONResponse(content={'message': 'test'}, status_code=200)
