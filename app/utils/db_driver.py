@@ -1,7 +1,7 @@
 import sqlite3
 from fastapi import HTTPException
 from typing import Optional
-from app.utils.model import User
+from app.utils.model import User, PostUserCrop
 import os
 
 def _with_cur(func):
@@ -40,6 +40,7 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
     nums INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT,
     crop_id INTEGER,
+    nick_name TEXT,
     live_day INTEGER DEFAULT 1,
     is_end INTEGER DEFAULT 0,
     FOREIGN KEY (crop_id) REFERENCES crops(crop_id),
@@ -104,11 +105,11 @@ def get_crops(cur: Optional[sqlite3.Cursor] = None):
 
 
 @_with_cur
-def create_user_crop(c_id, user_id, cur: Optional[sqlite3.Cursor] = None):
-    query = "INSERT INTO user_crops(user_id, crop_id) VALUES (?, ?)"
+def create_user_crop(data: PostUserCrop, user_id: str, cur: Optional[sqlite3.Cursor] = None):
+    query = "INSERT INTO user_crops(user_id, crop_id, nick_name) VALUES (?, ?, ?)"
 
     try:
-        cur.execute(query, (user_id, c_id))
+        cur.execute(query, (user_id, data.c_id, data.name))
     except Exception as e:
         raise HTTPException(status_code=400, detail='해당 곡물이 존재하지 않습니다.')
 
@@ -151,6 +152,26 @@ def get_session_info(key: str, cur: Optional[sqlite3.Cursor] = None):
     if user is None:
         return None
     return user[0]
+
+@_with_cur
+def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
+    query = "SELECT crop_id, nick_name, live_day, is_end FROM user_crops WHERE user_id = ?"
+    cur.execute(query, (uid,))
+
+    res = []
+
+    for data in cur.fetchall():
+        if data[3] > mode:
+            continue
+
+        res.append({
+            'crop_id': data[0],
+            'nick_name': data[1],
+            'live_day': data[2],
+        })
+
+    return res
+
 
 if __name__ == "__main__":
     _init_db()
