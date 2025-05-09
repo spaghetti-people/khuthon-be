@@ -10,22 +10,24 @@ from app.utils.model import User
 
 router = APIRouter()
 
-session_store = {}
 
 # 비밀번호 해시 함수
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
 
-
 def get_session_id(request: Request):
-    return request.headers.get('Authorization')
+    sid = request.headers.get('Authorization')
+    return sid
+
+def get_session_info(request: Request):
+    return db.get_session_info(get_session_id(request))
 
 def login_require(func):
     @wraps(func)
     async def wrapper(request: Request, *args, **kwargs):
-        code = get_session_id(request)
+        code = get_session_id(request).strip()
 
-        if code not in session_store:
+        if not db.verify_session(code):
             raise HTTPException(status_code=401, detail='Need login.')
 
         return await func(request=request, *args, **kwargs)
@@ -41,7 +43,8 @@ def login(request: Request, user: User):
     if origin[0] == user.id and origin[1] == now:
         session_id = str(uuid.uuid4())
 
-        session_store[session_id] = {'user': user.id}
+        db.login(session_id, user.id)
+
         return JSONResponse(status_code=200, content={'message': '로그인 성공', 'session': session_id})
 
     return JSONResponse(status_code=401, content={'message': '로그인 실패'})
@@ -56,10 +59,10 @@ def join(user: User):
 
 @router.get('/logout', summary="로그아웃", tags=['auth'])
 @login_require
-def logout(request: Request):
+async def logout(request: Request):
     sid = get_session_id(request)
 
-    session_store.pop(sid, None)
+    db.logout(sid)
 
     return JSONResponse(status_code=200, content={'message': '로그아웃 성공.'})
 

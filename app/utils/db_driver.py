@@ -7,7 +7,8 @@ import os
 def _with_cur(func):
     def wrapper(*args, **kwargs):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        db_path = os.path.join(base_dir, "data.db")
+        parent_dir = os.path.dirname(base_dir)
+        db_path = os.path.join(parent_dir, "data.db")
 
         conn = sqlite3.connect(db_path)
         try:
@@ -22,6 +23,8 @@ def _with_cur(func):
 
 @_with_cur
 def _init_db(cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("PRAGMA foreign_keys = ON")
+
     # create user table
     user_table = """
     CREATE TABLE IF NOT EXISTS users (
@@ -31,8 +34,30 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
 
     cur.execute(user_table)
 
-    
+    # 사용자가 키우고 있는 식물 테이블
+    crops_table = """
+    CREATE TABLE IF NOT EXISTS user_crops (
+    nums INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    crop_id INTEGER,
+    live_day INTEGER DEFAULT 1,
+    is_end INTEGER DEFAULT 0,
+    FOREIGN KEY (crop_id) REFERENCES crops(crop_id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """
 
+    cur.execute(crops_table)
+
+    login_table = """
+    CREATE TABLE IF NOT EXISTS login_user (
+    login_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT,
+    user_id TEXT
+    )
+    """
+
+    cur.execute(login_table)
     pass
 
 
@@ -63,7 +88,69 @@ def join(id, pw, cur: Optional[sqlite3.Cursor] = None):
     cur.execute("INSERT INTO users(id, pw) VALUES(?, ?)", (id, pw))
 
 
+@_with_cur
+def get_crops(cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("SELECT crop_id, crop_name_KOR FROM crops")
 
+    result = []
+
+    for d in cur.fetchall():
+        result.append({
+            'crop_id': d[0],
+            'crop_name': d[1]
+        })
+
+    return result
+
+
+@_with_cur
+def create_user_crop(c_id, user_id, cur: Optional[sqlite3.Cursor] = None):
+    query = "INSERT INTO user_crops(user_id, crop_id) VALUES (?, ?)"
+
+    try:
+        cur.execute(query, (user_id, c_id))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail='해당 곡물이 존재하지 않습니다.')
+
+@_with_cur
+def login(key: str, user_id: str, cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("SELECT * FROM login_user WHERE user_id = ?", (user_id,))
+
+    res = cur.fetchone()
+
+    if res is not None:
+        raise HTTPException(status_code=401, detail="이미 로그인 하였습니다.")
+
+    query = "INSERT INTO login_user(key, user_id) VALUES(?, ?)"
+
+    try:
+        cur.execute(query, (key, user_id))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail='해당 사용자가 존재하지 않습니다.')
+
+@_with_cur
+def logout(key: str, cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("DELETE FROM login_user WHERE key = ?", (key,))
+
+@_with_cur
+def verify_session(key: str, cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("SELECT * FROM login_user WHERE key = ?", (key,))
+
+    user = cur.fetchone()
+
+    if user is None:
+        return False
+    return True
+
+@_with_cur
+def get_session_info(key: str, cur: Optional[sqlite3.Cursor] = None):
+    cur.execute("SELECT user_id FROM login_user WHERE key = ?", (key, ))
+
+    user = cur.fetchone()
+
+    if user is None:
+        return None
+    return user[0]
 
 if __name__ == "__main__":
     _init_db()
