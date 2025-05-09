@@ -7,22 +7,25 @@ from starlette.responses import JSONResponse
 from app.router.auth import login_require, get_session_info
 import app.utils.db_driver as db
 from datetime import date, timedelta
-<<<<<<< HEAD
 from app.router.predict import SensorData
 from pydantic import BaseModel
 import pandas as pd
 from app.utils.predict import preprocess_data, normalize_prediction
 import joblib
 from pathlib import Path
-=======
 from io import BytesIO
->>>>>>> 85ddc6148d6ff8413963856b11acc29d0b92fde1
 
 import requests
 
 from app.utils.model import PostUserCrop, WaterCrop
 
 router = APIRouter()
+
+
+model_path = Path(__file__).parent.parent / "utils" / "models" / "crop_growth_model.pkl"
+if not model_path.exists():
+    raise RuntimeError("모델 파일을 찾을 수 없습니다.")
+model = joblib.load(model_path)
 
 
 @router.get("/crop", tags=["crop"])
@@ -53,9 +56,11 @@ async def get_user_crops(request: Request, mode: int):
     mid = db.get_user_crop(user_info, mode)
 
     # TODO : db로 요청해서 진행도 획득해야함.
-    response = requests.get(os.getenv("REAL_FARM_SERVER") + "/daily_conditions").json()
+    response = requests.get(
+        os.getenv("REAL_FARM_SERVER") + "/daily_conditions_progress"
+    ).json()
 
-    print(response.json())
+    print(response)
     res = []
 
     for m in mid:
@@ -76,7 +81,12 @@ async def get_user_crops(request: Request, mode: int):
             evaluation = "나쁨"
         else:
             evaluation = "매우 나쁨"
-    return JSONResponse(status_code=200, content={"res": mid})
+
+        m["evaluation_rate"] = normalized_prediction
+        m["evaluation"] = evaluation
+
+        res.append(m)
+    return JSONResponse(status_code=200, content={"res": res})
 
 
 @router.post("/water", tags=["crop"])
@@ -94,14 +104,14 @@ def water(request: Request, data: WaterCrop):
 
     return JSONResponse(status_code=200, content={"res": res})
 
-@router.get('/time/{c_id}', tags=['crop'])
+
+@router.get("/time/{c_id}", tags=["crop"])
 @login_require
 async def get_time(request: Request, c_id: int):
 
     uid = get_session_info(request)
 
     row = db.get_user_time(uid, c_id)
-
 
     filename, content = row
 
