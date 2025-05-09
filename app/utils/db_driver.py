@@ -1,4 +1,6 @@
 import sqlite3
+
+from charset_normalizer.cli import query_yes_no
 from fastapi import HTTPException
 from typing import Optional
 from app.utils.model import User, PostUserCrop
@@ -176,18 +178,28 @@ def get_session_info(key: str, cur: Optional[sqlite3.Cursor] = None):
 
 @_with_cur
 def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
-    query = "SELECT nums, nick_name, live_day, is_end FROM user_crops WHERE user_id = ?"
+    query = "SELECT nums, nick_name, live_day, is_end, crop_id FROM user_crops WHERE user_id = ?"
     cur.execute(query, (uid,))
 
     res = []
 
-    for data in cur.fetchall():
-        if data[3] == mode:
+    tmp = cur.fetchall()
+    for data in tmp:
+
+        print("d:", data)
+
+        if data[3] != mode:
             continue
+
+        query = "SELECT crop_name_KOR FROM crops WHERE crop_id = ?"
+        cur.execute(query, (data[4],))
+
+        name = cur.fetchone()[0]
 
         res.append({
             'crop_id': data[0],
             'nick_name': data[1],
+            'crop_name': name,
             'live_day': data[2],
             'is_end': data[3],
         })
