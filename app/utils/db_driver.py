@@ -1,6 +1,6 @@
 import sqlite3
+from http.cookiejar import reach
 
-from charset_normalizer.cli import query_yes_no
 from fastapi import HTTPException
 from typing import Optional
 from app.utils.model import User, PostUserCrop
@@ -78,6 +78,21 @@ def _init_db(cur: Optional[sqlite3.Cursor] = None):
 
     cur.execute(water_table)
 
+    # video_table = ""
+    video_table = """
+    CREATE TABLE IF NOT EXISTS video_water (
+    video_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    crop_id INTEGER,
+    video BLOB,
+    FOREIGN KEY (crop_id) REFERENCES user_crops(nums),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """
+
+    cur.execute(video_table)
+
+
     pass
 
 
@@ -110,6 +125,17 @@ def join(id, pw, cur: Optional[sqlite3.Cursor] = None):
     # 성공한 작물 추가.
     query = "INSERT INTO user_crops(user_id, crop_id, nick_name, is_end) VALUES(?, ?, ?, ?)"
     cur.execute(query, (id, 1, '누룽지', 1))
+
+    # 타임 랩스 추가.
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 현재 파일 위치
+    file_path = os.path.join(BASE_DIR, "test.mp4")
+
+    print(file_path)
+    with open(file_path, 'rb') as f:
+        data = f.read()
+
+        query = "INSERT INTO video_water(user_id, crop_id, video) VALUES (?, ?, ?)"
+        cur.execute(query, (id, 1, data))
 
 
 @_with_cur
@@ -248,20 +274,18 @@ def water_crops(uid: str, c_id: int, water, cur: Optional[sqlite3.Cursor] = None
 
     return "ok"
 
+@_with_cur
+def get_user_time(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None):
+    query = "SELECT video FROM video_water WHERE user_id = ? and crop_id = ?"
+    cur.execute(query, (uid, c_id))
 
+    data = cur.fetchone()
 
-    water_table = """
-        CREATE TABLE IF NOT EXISTS user_water (
-        water_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        crop_id INTEGER,
-        now_water INTEGER DEFAULT 0,
-        max_water INTEGER DEFAULT 1000,
-        FOREIGN KEY (crop_id) REFERENCES user_crops(nums),
-        FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-        """
-    pass
+    if data is None:
+        raise HTTPException(status_code=404, detail='video data not found')
+
+    return [uid + str(c_id), data[0]]
+
 
 if __name__ == "__main__":
     _init_db()
