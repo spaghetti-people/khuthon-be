@@ -174,7 +174,7 @@ def get_user_crop(uid: str, mode: int, cur: Optional[sqlite3.Cursor] = None):
 
 @_with_cur
 def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None):
-    query = "SELECT nick_name FROM user_crops WHERE user_id = ? and crop_id = ?"
+    query = "SELECT nick_name, live_day FROM user_crops WHERE user_id = ? and crop_id = ?"
     cur.execute(query, (uid, c_id))
 
     data = cur.fetchone()
@@ -192,7 +192,7 @@ def get_user_crop_info(uid: str, c_id: int, cur: Optional[sqlite3.Cursor] = None
     if plant is None:
         raise HTTPException(status_code=404, detail='해당 식물이 존재하지 않습니다.')
 
-    return [data[0], plant[0]]
+    return [data[0], plant[0], data[1]]
 
     """
     CREATE TABLE IF NOT EXISTS user_crops (

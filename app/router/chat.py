@@ -41,11 +41,16 @@ async def new_chat(request: Request, data: NewChat):
         'user_id': user_id,
         'plant_info': plant_info,
         'child_profile': child,
-        'daily_data': daily_data,
+        'daily_data': {
+            'day': info[2],
+            'conditions': daily_data
+        },
         'user_message': user_message
     }
 
-    res = requests.post(os.getenv('AI_SERVER'), json=payload)
-    
-    return JSONResponse(status_code=200, content={'res': res})
+    print(payload)
+
+    res = requests.post(os.getenv('AI_SERVER') + "/plant/chat", json=payload)
+
+    return JSONResponse(status_code=200, content={'res': res.json()})
 
