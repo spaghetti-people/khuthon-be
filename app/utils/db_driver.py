@@ -105,6 +105,10 @@ def join(id, pw, cur: Optional[sqlite3.Cursor] = None):
     # 저장.
     cur.execute("INSERT INTO users(id, pw) VALUES(?, ?)", (id, pw))
 
+    # 성공한 작물 추가.
+    query = "INSERT INTO user_crops(user_id, crop_id, nick_name, is_end) VALUES(?, ?, ?, ?)"
+    cur.execute(query, (id, 1, '누룽지', 1))
+
 
 @_with_cur
 def get_crops(cur: Optional[sqlite3.Cursor] = None):

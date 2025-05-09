@@ -49,7 +49,6 @@ async def get_user_crops(request: Request, mode: int):
         planting_date = date.today() - timedelta(days=m['live_day'])
 
 
-
     return JSONResponse(status_code=200, content={'res': mid})
 
 @router.post('/water', tags=['crop'])
